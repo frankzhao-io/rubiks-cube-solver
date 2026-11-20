@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D 魔術方塊步驟求解器（LBL 分層教學版）</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🧊 3D 魔術方塊步驟求解器（分層還原教學）</h1>
+    <span class="hint">點方塊滑動轉層（含中層 M/E/S）· 拖曳背景或右鍵旋轉視角 · 鍵盤 U/D/L/R/F/B/M/E/S · Space 播放 · ←/→ 上下一步</span>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="canvas-wrap">
+        <canvas id="cube-canvas"></canvas>
+        <button id="btn-drag-mode" class="btn btn-canvas-hud-left mode-turn" type="button" title="智慧拖曳：點方塊轉層、拖背景或右鍵旋轉視角（可切換為僅轉視角防誤觸）">✨ 智慧拖曳</button>
+        <div id="drag-move-badge" class="drag-move-badge hidden"></div>
+        <button id="btn-reset-view" class="btn btn-canvas-hud" type="button" title="重設視角">🧭 重設視角</button>
+      </div>
+
+      <div class="toolbar">
+        <button id="btn-scramble" class="btn" type="button">🎲 隨機打亂</button>
+        <button id="btn-solve" class="btn btn-success" type="button">🧠 開始求解</button>
+        <button id="btn-reset" class="btn" type="button">🔄 重設</button>
+      </div>
+
+      <div class="solve-mode-bar">
+        <span class="muted">求解模式：</span>
+        <div class="solve-mode-switch" role="radiogroup" aria-label="求解模式">
+          <button class="solve-mode-btn active" type="button" data-solve-mode="lbl" title="7 階段基礎教學，約 120–140 步">📚 分層解 (LBL)</button>
+          <button class="solve-mode-btn" type="button" data-solve-mode="cfop" title="最佳十字 + F2L + 2-Look OLL/PLL，約 70–100 步">🚀 速擰解 (CFOP)</button>
+          <button class="solve-mode-btn" type="button" data-solve-mode="optimal" title="Kociemba 兩階段演算法，約 18–22 步最短路徑">⚡ 最優解 (~20步)</button>
+        </div>
+      </div>
+
+      <div id="status-banner" class="status-banner"></div>
+
+      <div class="mode-tabs" role="tablist" aria-label="操作模式">
+        <button class="mode-tab active" type="button" data-tab="solve" role="tab" aria-selected="true">🧠 求解與公式</button>
+        <button class="mode-tab" type="button" data-tab="paint" role="tab" aria-selected="false">🎨 手動填色</button>
+        <button class="mode-tab" type="button" data-tab="manual" role="tab" aria-selected="false">🖐️ 手動練習</button>
+      </div>
+
+      <div id="tab-solve" class="tab-pane active">
+        <div class="formula-bar">
+          <input id="formula-input" class="formula-input" type="text" placeholder="貼上打亂或公式，例如：R U R' U' F2" />
+          <button id="btn-apply-formula" class="btn btn-primary" type="button">套用</button>
+          <button id="btn-copy-scramble" class="btn" type="button" title="複製目前打亂或公式" disabled>複製</button>
+        </div>
+
+        <details class="notation-details">
+          <summary>❓ 轉動代號說明（U / D / R / L / F / B / M / E / S）</summary>
+          <div class="notation-guide">
+            <span><strong>外層</strong>：<code>U</code> 頂(白) · <code>D</code> 底(黃) · <code>R</code> 右(紅) · <code>L</code> 左(橘) · <code>F</code> 前(綠) · <code>B</code> 後(藍)</span>
+            <span><strong>中層</strong>：<code>M</code> 左右中層(同 L) · <code>E</code> 上下中層(同 D) · <code>S</code> 前後中層(同 F)</span>
+            <span><strong>方向</strong>：無符號 = 順時針 90° · <code>'</code> = 逆時針 90° · <code>2</code> = 180°（面對該面為準）</span>
+          </div>
+        </details>
+      </div>
+
+      <div id="tab-paint" class="tab-pane">
+        <div id="paint-palette" class="palette">
+          <div class="paint-tip">點選色票（或按鍵盤 <code>1–6</code>），再點 3D 貼紙或下方 2D 展開圖填色（中心塊鎖定）。</div>
+          <div id="swatch-row" class="swatch-row"></div>
+          <div class="fill-face-row">
+            <span class="muted">用目前選色填滿單面：</span>
+            <button class="btn btn-sm" type="button" data-fill-face="U">頂 U</button>
+            <button class="btn btn-sm" type="button" data-fill-face="D">底 D</button>
+            <button class="btn btn-sm" type="button" data-fill-face="F">前 F</button>
+            <button class="btn btn-sm" type="button" data-fill-face="B">後 B</button>
+            <button class="btn btn-sm" type="button" data-fill-face="R">右 R</button>
+            <button class="btn btn-sm" type="button" data-fill-face="L">左 L</button>
+          </div>
+          <div id="color-counts" class="color-counts"></div>
+          <div id="net-2d" class="net-2d"></div>
+        </div>
+      </div>
+
+      <div id="tab-manual" class="tab-pane">
+        <div class="manual-grid">
+          <button class="btn" type="button" data-move="U" title="頂面順時針 90°">U</button>
+          <button class="btn" type="button" data-move="D" title="底面順時針 90°">D</button>
+          <button class="btn" type="button" data-move="R" title="右面順時針 90°">R</button>
+          <button class="btn" type="button" data-move="L" title="左面順時針 90°">L</button>
+          <button class="btn" type="button" data-move="F" title="前面順時針 90°">F</button>
+          <button class="btn" type="button" data-move="B" title="後面順時針 90°">B</button>
+
+          <button class="btn" type="button" data-move="U'" title="頂面逆時針 90°">U'</button>
+          <button class="btn" type="button" data-move="D'" title="底面逆時針 90°">D'</button>
+          <button class="btn" type="button" data-move="R'" title="右面逆時針 90°">R'</button>
+          <button class="btn" type="button" data-move="L'" title="左面逆時針 90°">L'</button>
+          <button class="btn" type="button" data-move="F'" title="前面逆時針 90°">F'</button>
+          <button class="btn" type="button" data-move="B'" title="後面逆時針 90°">B'</button>
+
+          <button class="btn" type="button" data-move="U2" title="頂面旋轉 180°">U2</button>
+          <button class="btn" type="button" data-move="D2" title="底面旋轉 180°">D2</button>
+          <button class="btn" type="button" data-move="R2" title="右面旋轉 180°">R2</button>
+          <button class="btn" type="button" data-move="L2" title="左面旋轉 180°">L2</button>
+          <button class="btn" type="button" data-move="F2" title="前面旋轉 180°">F2</button>
+          <button class="btn" type="button" data-move="B2" title="後面旋轉 180°">B2</button>
+        </div>
+
+        <div class="manual-subhead">中層轉動（<code>M</code> 同 L · <code>E</code> 同 D · <code>S</code> 同 F）</div>
+        <div class="manual-grid manual-grid-mid">
+          <button class="btn" type="button" data-move="M" title="左右中層順時針（同 L 方向）">M</button>
+          <button class="btn" type="button" data-move="E" title="上下中層順時針（同 D 方向）">E</button>
+          <button class="btn" type="button" data-move="S" title="前後中層順時針（同 F 方向）">S</button>
+          <button class="btn" type="button" data-move="M'" title="左右中層逆時針（同 L' 方向）">M'</button>
+          <button class="btn" type="button" data-move="E'" title="上下中層逆時針（同 D' 方向）">E'</button>
+          <button class="btn" type="button" data-move="S'" title="前後中層逆時針（同 F' 方向）">S'</button>
+          <button class="btn" type="button" data-move="M2" title="左右中層 180°">M2</button>
+          <button class="btn" type="button" data-move="E2" title="上下中層 180°">E2</button>
+          <button class="btn" type="button" data-move="S2" title="前後中層 180°">S2</button>
+        </div>
+
+        <div id="manual-history-box" class="manual-history-box">
+          <div class="history-head">
+            <span>🖐️ 已按動作紀錄（<strong id="history-count">0</strong> 步）</span>
+            <div style="display:flex;gap:6px;">
+              <button id="btn-undo-manual" class="btn btn-sm" type="button" disabled>↩️ 撤銷一步</button>
+              <button id="btn-clear-history" class="btn btn-sm" type="button" disabled>清空</button>
+            </div>
+          </div>
+          <div id="manual-history-list" class="history-list"><span class="muted">尚未手動轉動</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="player-controls">
+        <button id="btn-prev" class="btn" type="button">⏮ 上一步</button>
+        <button id="btn-play" class="btn btn-primary" type="button">▶️ 自動播放</button>
+        <button id="btn-next" class="btn" type="button">下一步 ⏭</button>
+        <div class="speed-wrap">
+          <span>速度</span>
+          <input id="speed-slider" type="range" min="0.5" max="4" step="0.5" value="1.5" />
+          <span id="speed-label">1.5x</span>
+        </div>
+      </div>
+
+      <div id="active-step-box" class="active-step-box"></div>
+      <div class="timeline-toolbar">
+        <span class="muted">分層步驟總覽</span>
+        <button id="btn-toggle-all-phases" class="btn btn-sm" type="button" disabled>展開全部</button>
+      </div>
+      <div id="timeline" class="timeline"></div>
+    </section>
+  </main>
+
+  <script src="js/cube.js"></script>
+  <script src="js/solver.js"></script>
+  <script src="js/solver-cfop.js"></script>
+  <script src="js/solver-optimal.js"></script>
+  <script src="js/renderer3d.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
