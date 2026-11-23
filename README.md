@@ -2,6 +2,8 @@
 
 Zero-dependency 3D Canvas Rubik's Cube interactive solver and trainer. Runs directly in any browser (`index.html`), including offline via `file://`.
 
+**[Live Demo](https://frankzhao-io.github.io/rubiks-cube-solver/)**
+
 ![3D Rubik's Cube Solver Preview](assets/preview.jpg)
 
 ## Features
